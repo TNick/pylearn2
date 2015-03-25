@@ -339,6 +339,7 @@ def initialize():
     yaml.add_multi_constructor('!obj:', multi_constructor_obj)
     yaml.add_multi_constructor('!pkl:', multi_constructor_pkl)
     yaml.add_multi_constructor('!import:', multi_constructor_import)
+    yaml.add_multi_constructor('!value:', multi_constructor_value)
 
     yaml.add_constructor('!import', constructor_import)
     yaml.add_constructor("!float", constructor_float)
@@ -405,6 +406,41 @@ def multi_constructor_import(loader, tag_suffix, node):
     if '.' not in tag_suffix:
         raise yaml.YAMLError("!import: tag suffix contains no '.'")
     return try_to_import(tag_suffix)
+
+def multi_constructor_value(loader, tag_suffix, node):
+    """
+    Callback used by PyYAML when a "!value:" tag is encountered.
+    """
+    if tag_suffix != "" and tag_suffix != u"":
+        raise AssertionError('Expected tag_suffix to be "" but it is "'
+                             + tag_suffix +
+                             '": Put space between !value: and the filename.')
+
+    assert node.tag == '!value:'
+
+    mapping = loader.construct_mapping(node)
+    for key in mapping.keys():
+        if not isinstance(key, six.string_types):
+            message = "Received non string object (%s) as " \
+                      "key in mapping." % str(key)
+            raise TypeError(message)
+
+    obj_to_call = _instantiate(mapping['obj_to_call'])
+    func = getattr(obj_to_call, mapping['method_to_call'])
+    if 'arguments' in mapping:
+        arguments = mapping['arguments']
+    else:
+        arguments = None
+
+    if hasattr(func, '__call__'):
+        if arguments == None:
+            result = func()
+        else:
+            result = func(arguments)
+    else:
+        result = func
+
+    return result
 
 
 def constructor_import(loader, node):
