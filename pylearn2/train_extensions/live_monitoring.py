@@ -638,7 +638,7 @@ if QT_AVAILABLE:
                 splot_layout = [splot_len//5, 5]
 
             self.ax = []
-            for splot_i in enumerate(len(self.channel_dict)):
+            for splot_i in range(len(self.channel_dict)):
                 self.ax.append(self.fig.add_subplot(splot_layout[0],
                                                     splot_layout[1],
                                                     splot_i+1))
