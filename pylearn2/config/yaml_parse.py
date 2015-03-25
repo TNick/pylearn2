@@ -164,7 +164,7 @@ def _instantiate(proxy, bindings=None):
     # In the future it might be good to consider a dict argument that provides
     # a type->callable mapping for arbitrary transformations like this.
     elif isinstance(proxy, six.string_types):
-        return preprocess(proxy)
+        return preprocess(proxy, additional_environ)
     else:
         return proxy
 
@@ -201,6 +201,12 @@ def load(stream, environ=None, instantiate=True, **kwargs):
     global additional_environ
     if not is_initialized:
         initialize()
+
+    # preprocess in string_utils assumes strings so we are making
+    # all entries strings here
+    if not environ is None:
+        for k in environ.keys():
+            environ[k] = str(environ[k])
     additional_environ = environ
 
     if isinstance(stream, six.string_types):
@@ -418,8 +424,7 @@ def constructor_float(loader, node):
     This tag exects a (quoted) string as argument.
     """
     value = loader.construct_scalar(node)
-    return float(value)
-
+    return float(preprocess(value, additional_environ))
 
 def construct_mapping(node, deep=False):
     # This is a modified version of yaml.BaseConstructor.construct_mapping
