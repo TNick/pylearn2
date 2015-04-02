@@ -267,6 +267,7 @@ def train(config, level_name=None, timestamp=None, time_budget=None,
         repot_f.write(hdr)
         repot_f.write(hdr_guards)
 
+    emergency_exit = False
     while cont_flag:
 
         # log to user and start a new line for the report
@@ -297,6 +298,7 @@ def train(config, level_name=None, timestamp=None, time_budget=None,
 
             # perform all the tests/experiments once
             first_subobj = True
+            subobj_completed = 0
             for number, subobj in enumerate(train_list_inst):
 
                 # Publish a variable indicating the training phase.
@@ -318,7 +320,8 @@ def train(config, level_name=None, timestamp=None, time_budget=None,
                                subobj.model.monitor.get_examples_seen(),
                                _getBestResult(subobj)))
 
-                # TODO: report performance here or channels for best according to objective
+                    # TODO: report performance here or channels
+                    # for best model according to objective
 
                 first_subobj = False
 
@@ -328,19 +331,28 @@ def train(config, level_name=None, timestamp=None, time_budget=None,
                 # that it does not get cleaned up here.
                 del subobj
                 gc.collect()
+                subobj_completed = subobj_completed + 1
 
         except (KeyboardInterrupt, SystemExit):
-            raise
+            emergency_exit = True
+            if repot_f:
+                repot_f.write('%50s' % 'User terminated')
+
         except Exception, exc:
             if skip_exceptions:
-                repot_f.write('%50s' % str(exc))
+                if repot_f:
+                    repot_f.write('%50s' % str(exc))
             else:
                 raise
 
         # we've completed a run; finalize report line for it
         if repot_f:
-            repot_f.write(' %4d completed\n' % len(train_list_inst))
+            repot_f.write(' %4d completed\n' % subobj_completed)
             repot_f.flush()
+
+        # user requested exit
+        if emergency_exit:
+            break
 
         # LiveMonitoring seems to stay behind and binded to same port
         # That will throw an exception on next run
@@ -349,6 +361,7 @@ def train(config, level_name=None, timestamp=None, time_budget=None,
         gc.collect()
 
         # prepare next run
+
         cont_flag = multiseq.next_iteration()
 
     # done with the report
