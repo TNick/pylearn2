@@ -321,4 +321,4 @@ class MultiSeq(object):
                                           environ=self.dynamic_env)))
             f_param.write('#----------------------------------------\n')
             for k in os.environ.keys():
-                f_param.write('%s: %s\n', k, os.environ[k])
+                f_param.write('%s: %s\n' % (k, os.environ[k]))
