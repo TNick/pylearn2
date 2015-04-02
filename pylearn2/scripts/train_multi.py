@@ -257,7 +257,14 @@ def train(config, level_name=None, timestamp=None, time_budget=None,
     report = _getVar('PYLEARN2_REPORT', multiseq.dynamic_env)
     if report:
         repot_f = open(report, "a")
-
+        hdr = (' Index     Date & Time                 Tag            '
+               'Finish    Train   Total  Batchs  Epochs Exampl  '
+               'Best result   Tests in file\n')
+        hdr_guards = '-' * len(hdr) + '\n'
+        repot_f.write(hdr_guards)
+        repot_f.write(hdr)
+        repot_f.write(hdr_guards)
+        
     while cont_flag:
 
         # log to user and start a new line for the report
@@ -331,6 +338,7 @@ def train(config, level_name=None, timestamp=None, time_budget=None,
         # we've completed a run; finalize report line for it
         if repot_f:
             repot_f.write(' %4d completed\n' % len(train_list_inst))
+            repot_f.flush()
 
         # LiveMonitoring seems to stay behind and binded to same port
         # That will throw an exception on next run
