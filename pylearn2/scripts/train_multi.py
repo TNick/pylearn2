@@ -164,7 +164,7 @@ def _getBestResult(experiment):
     """
     try:
         return ' %12.8f' % \
-               experiment.model.tag['MonitorBasedSaveBest']['best_cost'][0]
+               experiment.model.tag['MonitorBasedSaveBest']['best_cost'].item(0)
     except:
         return ' '*13
 
