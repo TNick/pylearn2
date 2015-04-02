@@ -50,6 +50,8 @@ from numpy import linspace
 from random import randint
 import re
 
+from pylearn2.utils import as_floatX
+
 # Regular expression used to extract data from !range
 RANGE_REGEXP = r'^\$\{([0-9a-zA-Z_]+):([0-9\.]+),([0-9\.]+),([0-9]+)\}$'
 
@@ -107,7 +109,7 @@ class RangeVar(object):
         """
         Returns the value based on internal range and index.
         """
-        return self.space[self.index]
+        return as_floatX(self.space[self.index])
         
 class MultiSeq(object):
     """
@@ -259,7 +261,6 @@ class MultiSeq(object):
         # add our range variables to custom environment
         for dynk in self.range_vars:
             self.dynamic_env[dynk] = str(self.val_for_name(dynk))
-        
     
     @staticmethod
     def _to_number(s):
