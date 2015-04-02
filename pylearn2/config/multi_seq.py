@@ -108,8 +108,18 @@ class RangeVar(object):
     def value(self):
         """
         Returns the value based on internal range and index.
+        
+        We can't just `float(self.space[self.index])` because it may get
+        promoted to float64 and that is only desirable if floatX is float64.
+        
+        We can't also just `as_floatX(self.space[self.index])` because there
+        are assertions in code that explicitly expect a float and
+        as_floatX will create a one dimensional array.
+        
+        So, there you go. The solution below appears to work. I'm sure you 
+        can see why.
         """
-        return as_floatX(self.space[self.index])
+        return float(as_floatX(self.space[self.index]))
         
 class MultiSeq(object):
     """
