@@ -315,6 +315,8 @@ def train(config, level_name=None, timestamp=None, time_budget=None,
 
                 # Clean up, in case there's a lot of memory used that's
                 # necessary for the next phase.
+                # TODO: because subobj is part of a bigger object it may be 
+                # that it does not get cleaned up here.
                 del subobj
                 gc.collect()
 
@@ -329,6 +331,12 @@ def train(config, level_name=None, timestamp=None, time_budget=None,
         # we've completed a run; finalize report line for it
         if repot_f:
             repot_f.write(' %4d completed\n' % len(train_list_inst))
+
+        # LiveMonitoring seems to stay behind and binded to same port
+        # That will throw an exception on next run
+        # We try to mitigate that here.
+        del train_list_inst
+        gc.collect()
 
         # prepare next run
         cont_flag = multiseq.next_iteration()
