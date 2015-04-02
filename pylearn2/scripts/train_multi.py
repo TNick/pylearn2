@@ -129,17 +129,13 @@ def make_argument_parser():
                         action='store_true',
                         help='Display any DEBUG-level log messages, '
                              'suppressed by default.')
+    parser.add_argument('--skipexc',
+                        action='store_true',
+                        help='Skip exceptions in  main loop.')
     parser.add_argument('config', action='store',
                         choices=None,
                         help='A YAML configuration file specifying the '
                              'training procedure')
-    parser.add_argument('config', action='store',
-                        choices=None,
-                        help='A YAML configuration file specifying the '
-                             'training procedure') 
-    parser.add_argument('--skipexc',
-                        action='store_true',
-                        help='Skip exceptions in  main loop.')
     return parser
 
 
