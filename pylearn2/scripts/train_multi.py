@@ -89,6 +89,7 @@ import argparse
 import gc
 import logging
 import os
+from time import strftime
 
 # Local imports
 from pylearn2.utils import serial
@@ -135,11 +136,41 @@ def make_argument_parser():
     return parser
 
 
+def _getVar(key, environ=None):
+    """
+    Looks for a key in custom and os environments.
 
+    Parameters
+    ----------
+    key : str
+        The key to look for.
+    environ : dict, optional
+        A custom dictionary to search befor system environment.
+
+    Returns
+    -------
+        None if the key was not found, a string otherwise.
+    """
+    if environ:
+        if environ.has_key(key):
+            return environ[key]
+    if os.environ.has_key():
+        return os.environ[key]
+    return None
+
+def _getBestResult(experiment):
+    """
+    If the experiment uses MonitorBasedSaveBest wi;; extract last best result.
+    """
+    try:
+        return ' %12.8f' % \
+               experiment.model.tag['MonitorBasedSaveBest']['best_cost'][0]
+    except:
+        return ' '*13
 
 
 def train(config, level_name=None, timestamp=None, time_budget=None,
-          verbose_logging=None, debug=None, environ=None):
+          verbose_logging=None, debug=None, environ=None, skip_exceptions=False):
     """
     Trains a given YAML file.
 
@@ -190,7 +221,7 @@ def train(config, level_name=None, timestamp=None, time_budget=None,
         formatter = CustomFormatter(prefix=prefix, only_from='pylearn2')
         handler = CustomStreamHandler(formatter=formatter)
     root_logger.addHandler(handler)
-    
+
     # Set the root logger level.
     if debug:
         root_logger.setLevel(logging.DEBUG)
@@ -221,39 +252,89 @@ def train(config, level_name=None, timestamp=None, time_budget=None,
     multiseq.first_iteration()
     cont_flag = True
 
+    # see if we're going to generate a report
+    repot_f = None
+    report = _getVar('PYLEARN2_REPORT', multiseq.dynamic_env)
+    if report:
+        repot_f = open(report, "a")
+
     while cont_flag:
-        
-        root_logger.debug('Run %s with tag %s' % (multiseq.dynamic_env['MULTISEQ_ITER'], multiseq.dynamic_env['MULTISEQ_TAG']))
+
+        # log to user and start a new line for the report
+        root_logger.debug('Run %s with tag %s',
+                          multiseq.dynamic_env['MULTISEQ_ITER'],
+                          multiseq.dynamic_env['MULTISEQ_TAG'])
+        if repot_f:
+            repot_f.write('%6s %s %s ' % \
+                         (multiseq.dynamic_env['MULTISEQ_ITER'],
+                          strftime("%Y %m %d %H:%M:%S"),
+                          multiseq.dynamic_env['MULTISEQ_TAG']))
 
         # update the environment with our dynamic variables
         yaml_parse.additional_environ = multiseq.dynamic_env
 
-        # TODO: we are accesing a protected member here
-        # either change the name or define a wrapper
-        train_list_inst = yaml_parse._instantiate(train_list)
+        # as this wil probably be an unattended process we may want to
+        # tolerate exceptions
+        try:
 
-        # if the environment defines a PARAMETERS_FILE variable
-        # dump the parameters there as simple text
-        multiseq.save_params(train_list_inst)
+            # TODO: we are accesing a protected member here
+            # either change the name or define a wrapper
+            train_list_inst = yaml_parse._instantiate(train_list)
 
-        # perform all the tests/experiments once
-        for number, subobj in enumerate(train_list_inst):
+            # if the environment defines a PARAMETERS_FILE variable
+            # dump the parameters there as simple text
+            multiseq.save_params(train_list_inst)
 
-            # Publish a variable indicating the training phase.
-            phase_variable = 'PYLEARN2_TRAIN_PHASE'
-            phase_value = 'phase%d' % (number + 1)
-            os.environ[phase_variable] = phase_value
+            # perform all the tests/experiments once
+            first_subobj = True
+            for number, subobj in enumerate(train_list_inst):
 
-            # Execute this training phase.
-            subobj.main_loop(time_budget=time_budget)
+                # Publish a variable indicating the training phase.
+                phase_variable = 'PYLEARN2_TRAIN_PHASE'
+                phase_value = 'phase%d' % (number + 1)
+                os.environ[phase_variable] = phase_value
 
-            # Clean up, in case there's a lot of memory used that's
-            # necessary for the next phase.
-            del subobj
-            gc.collect()
+                # Execute this training phase.
+                subobj.main_loop(time_budget=time_budget)
+
+                # log first train to the report
+                if first_subobj and repot_f:
+                    repot_f.write('%6s %8d %8d %6d %6d %7d %s' % \
+                              (str(subobj.model.monitor.training_succeeded),
+                               subobj.training_seconds,
+                               subobj.total_seconds,
+                               subobj.model.monitor.get_batches_seen(),
+                               subobj.model.monitor.get_epochs_seen(),
+                               subobj.model.monitor.get_examples_seen(),
+                               _getBestResult(subobj)))
+
+                # TODO: report performance here or channels for best according to objective
+
+                first_subobj = False
+
+                # Clean up, in case there's a lot of memory used that's
+                # necessary for the next phase.
+                del subobj
+                gc.collect()
+
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except Exception, exc:
+            if skip_exceptions:
+                repot_f.write('%50s' % str(exc))
+            else:
+                raise
+
+        # we've completed a run; finalize report line for it
+        if repot_f:
+            repot_f.write(' %4d completed\n' % len(train_list_inst))
 
         # prepare next run
         cont_flag = multiseq.next_iteration()
+
+    # done with the report
+    if repot_f:
+        repot_f.close()
 
 def main():
     """
