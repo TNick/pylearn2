@@ -310,8 +310,9 @@ class MultiSeq(object):
         """
         if not self.dynamic_env.has_key('PARAMETERS_FILE'):
             return
-
-        with open(self.dynamic_env['PARAMETERS_FILE'], "w") as f_param:
+        file_path = string_utils.preprocess(self.dynamic_env['PARAMETERS_FILE'],
+                                            self.dynamic_env)
+        with open(file_path, "w") as f_param:
             for k in self.dynamic_env.keys():
                 f_param.write('%s: %s\n', k,
                               string_utils.preprocess(self.dynamic_env[k],
