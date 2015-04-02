@@ -271,7 +271,8 @@ def train(config, level_name=None, timestamp=None, time_budget=None,
                           multiseq.dynamic_env['MULTISEQ_TAG']))
 
         # update the environment with our dynamic variables
-        yaml_parse.additional_environ = multiseq.dynamic_env
+        # yaml_parse.additional_environ = multiseq.dynamic_env
+        os.environ.update(multiseq.dynamic_env)
 
         # as this wil probably be an unattended process we may want to
         # tolerate exceptions
