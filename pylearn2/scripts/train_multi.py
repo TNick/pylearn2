@@ -379,13 +379,14 @@ def main():
     """
     local_parser = make_argument_parser()
     args = local_parser.parse_args()
-    train(args.config, 
-          args.level_name, 
-          args.timestamp, 
-          args.time_budget,
-          args.verbose_logging, 
-          args.debug,
-          args.skipexc)
+    train(config=args.config,
+          level_name=args.level_name,
+          timestamp=args.timestamp,
+          time_budget=args.time_budget,
+          verbose_logging=args.verbose_logging,
+          debug=args.debug,
+          environ=None,
+          skip_exceptions=args.skipexc)
 
 if __name__ == "__main__":
     # See module-level docstring for a description of the script.
