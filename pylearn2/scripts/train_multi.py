@@ -92,7 +92,7 @@ import os
 from time import strftime
 
 # Local imports
-from pylearn2.utils import serial
+from pylearn2.utils import serial, string_utils
 from pylearn2.utils.logger import (
     CustomStreamHandler, CustomFormatter, restore_defaults
 )
@@ -153,9 +153,9 @@ def _getVar(key, environ=None):
     """
     if environ:
         if environ.has_key(key):
-            return environ[key]
+            return string_utils.preprocess(environ[key], environ=environ)
     if os.environ.has_key():
-        return os.environ[key]
+        return string_utils.preprocess(os.environ[key])
     return None
 
 def _getBestResult(experiment):
