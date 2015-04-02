@@ -284,7 +284,7 @@ def train(config, level_name=None, timestamp=None, time_budget=None,
 
             # if the environment defines a PARAMETERS_FILE variable
             # dump the parameters there as simple text
-            multiseq.save_params(train_list_inst)
+            multiseq.save_params()
 
             # perform all the tests/experiments once
             first_subobj = True
