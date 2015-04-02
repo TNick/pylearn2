@@ -478,6 +478,8 @@ class LiveMonitor(object):
         if isinstance(rsp_msg.data, Exception):
             raise rsp_msg.data
 
+        first_channel = True
+        cutoff_loc = None
         for channel in rsp_msg.data.keys():
             rsp_chan = rsp_msg.data[channel]
 
@@ -499,11 +501,31 @@ class LiveMonitor(object):
                 assert len_batch_rec == len(rsp_chan.time_record)
                 assert len_batch_rec == len(rsp_chan.val_record)
 
-                chan.batch_record += rsp_chan.batch_record
-                chan.epoch_record += rsp_chan.epoch_record
-                chan.example_record += rsp_chan.example_record
-                chan.time_record += rsp_chan.time_record
-                chan.val_record += rsp_chan.val_record
+                if first_channel:
+                    # If there is an 0 in the epocs the previous training
+                    # was terminated and a new one started.
+                    try:
+                        cutoff_loc = rsp_chan.epoch_record.index(0)
+                    except ValueError:
+                        cutoff_loc = None
+
+                # Are we starting over?
+                if cutoff_loc is None:
+                    # just another brick in the wall
+                    chan.batch_record += rsp_chan.batch_record
+                    chan.epoch_record += rsp_chan.epoch_record
+                    chan.example_record += rsp_chan.example_record
+                    chan.time_record += rsp_chan.time_record
+                    chan.val_record += rsp_chan.val_record
+                else:
+                    # we're in a new experiment
+                    chan.batch_record = rsp_chan.batch_record[cutoff_loc:]
+                    chan.epoch_record = rsp_chan.epoch_record[cutoff_loc:]
+                    chan.example_record = rsp_chan.example_record[cutoff_loc:]
+                    chan.time_record = rsp_chan.time_record[cutoff_loc:]
+                    chan.val_record = rsp_chan.val_record[cutoff_loc:]
+
+                first_channel = False
 
     def follow_channels(self, channel_list, use_qt=False):
         """
