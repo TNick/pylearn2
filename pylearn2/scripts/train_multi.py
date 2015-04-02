@@ -257,14 +257,16 @@ def train(config, level_name=None, timestamp=None, time_budget=None,
     report = _getVar('PYLEARN2_REPORT', multiseq.dynamic_env)
     if report:
         repot_f = open(report, "a")
-        hdr = (' Index     Date & Time                 Tag            '
-               'Finish    Train   Total  Batchs  Epochs Exampl  '
-               'Best result   Tests in file\n')
+        hdr = (' Index      '
+               'Date & Time                       '
+               'Tag                  '
+               'Finish    Train    Total Batchs  Epchs  Exampls   '
+               'Best result  Tests in file\n')
         hdr_guards = '-' * len(hdr) + '\n'
         repot_f.write(hdr_guards)
         repot_f.write(hdr)
         repot_f.write(hdr_guards)
-        
+
     while cont_flag:
 
         # log to user and start a new line for the report
@@ -272,7 +274,7 @@ def train(config, level_name=None, timestamp=None, time_budget=None,
                           multiseq.dynamic_env['MULTISEQ_ITER'],
                           multiseq.dynamic_env['MULTISEQ_TAG'])
         if repot_f:
-            repot_f.write('%6s %s %s ' % \
+            repot_f.write('%6s  %19s  %36s  ' % \
                          (multiseq.dynamic_env['MULTISEQ_ITER'],
                           strftime("%Y %m %d %H:%M:%S"),
                           multiseq.dynamic_env['MULTISEQ_TAG']))
@@ -307,7 +309,7 @@ def train(config, level_name=None, timestamp=None, time_budget=None,
 
                 # log first train to the report
                 if first_subobj and repot_f:
-                    repot_f.write('%6s %8d %8d %6d %6d %7d %s' % \
+                    repot_f.write('%6s %8d %8d %6d %6d %8d %s' % \
                               (str(subobj.model.monitor.training_succeeded),
                                subobj.training_seconds.get_value().item(0),
                                subobj.total_seconds.get_value().item(0),
@@ -322,7 +324,7 @@ def train(config, level_name=None, timestamp=None, time_budget=None,
 
                 # Clean up, in case there's a lot of memory used that's
                 # necessary for the next phase.
-                # TODO: because subobj is part of a bigger object it may be 
+                # TODO: because subobj is part of a bigger object it may be
                 # that it does not get cleaned up here.
                 del subobj
                 gc.collect()
