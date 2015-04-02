@@ -302,8 +302,8 @@ def train(config, level_name=None, timestamp=None, time_budget=None,
                 if first_subobj and repot_f:
                     repot_f.write('%6s %8d %8d %6d %6d %7d %s' % \
                               (str(subobj.model.monitor.training_succeeded),
-                               subobj.training_seconds,
-                               subobj.total_seconds,
+                               subobj.training_seconds.get_value().item(0),
+                               subobj.total_seconds.get_value().item(0),
                                subobj.model.monitor.get_batches_seen(),
                                subobj.model.monitor.get_epochs_seen(),
                                subobj.model.monitor.get_examples_seen(),
