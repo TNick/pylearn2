@@ -49,6 +49,8 @@ __email__ = "pylearn-dev@googlegroups"
 from numpy import linspace
 from random import randint
 import re
+from datetime import datetime
+from uuid import uuid1
 
 from pylearn2.utils import as_floatX
 
@@ -194,11 +196,13 @@ class MultiSeq(object):
         Generate a unique tag for current run.
         """
         if self.gen_tag == 'uuid':
-            from uuid import uuid1
             self.multiseq_tag = str(uuid1())
         else:
-            from time import strftime
-            self.multiseq_tag = strftime("%Y_%m_%d_%H_%M_%S_%f")
+            dt = datetime.utcnow()
+            self.multiseq_tag = '%4d_%02d_%02d_%02d_%02d_%02d_%06d' % \
+                                (dt.year, dt.month, dt.day, 
+                                 dt.hour, dt.minute, dt.second, 
+                                 dt.microsecond)
             
     def first_iteration(self):
         """
