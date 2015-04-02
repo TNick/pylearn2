@@ -133,6 +133,13 @@ def make_argument_parser():
                         choices=None,
                         help='A YAML configuration file specifying the '
                              'training procedure')
+    parser.add_argument('config', action='store',
+                        choices=None,
+                        help='A YAML configuration file specifying the '
+                             'training procedure') 
+    parser.add_argument('--skipexc',
+                        action='store_true',
+                        help='Skip exceptions in  main loop.')
     return parser
 
 
@@ -263,9 +270,11 @@ def train(config, level_name=None, timestamp=None, time_budget=None,
                'Finish    Train    Total Batchs  Epchs  Exampls   '
                'Best result  Tests in file\n')
         hdr_guards = '-' * len(hdr) + '\n'
+        repot_f.write('\n')
         repot_f.write(hdr_guards)
         repot_f.write(hdr)
         repot_f.write(hdr_guards)
+        repot_f.write('\n')
 
     emergency_exit = False
     while cont_flag:
@@ -374,8 +383,13 @@ def main():
     """
     local_parser = make_argument_parser()
     args = local_parser.parse_args()
-    train(args.config, args.level_name, args.timestamp, args.time_budget,
-          args.verbose_logging, args.debug)
+    train(args.config, 
+          args.level_name, 
+          args.timestamp, 
+          args.time_budget,
+          args.verbose_logging, 
+          args.debug,
+          args.skipexc)
 
 if __name__ == "__main__":
     # See module-level docstring for a description of the script.
