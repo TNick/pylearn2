@@ -34,6 +34,7 @@ from datetime import datetime
 from uuid import uuid1
 
 from pylearn2.utils import as_floatX, string_utils
+from pylearn2.utils.string_utils import preprocess
 
 # Regular expression used to extract data from !range
 RANGE_REGEXP = r'^\$\{([0-9a-zA-Z_]+):([0-9\.]+),([0-9\.]+),([0-9]+)\}$'
@@ -310,13 +311,14 @@ class MultiSeq(object):
         """
         if not self.dynamic_env.has_key('PARAMETERS_FILE'):
             return
-        file_path = string_utils.preprocess(self.dynamic_env['PARAMETERS_FILE'],
-                                            self.dynamic_env)
+        file_path = preprocess(self.dynamic_env['PARAMETERS_FILE'],
+                               self.dynamic_env)
         with open(file_path, "w") as f_param:
             for k in self.dynamic_env.keys():
-                f_param.write('%s: %s\n', k,
-                              string_utils.preprocess(self.dynamic_env[k],
-                                                      environ=self.dynamic_env))
+                f_param.write('%s: %s\n' % \
+                              (k,
+                               preprocess(self.dynamic_env[k],
+                                          environ=self.dynamic_env)))
             f_param.write('#----------------------------------------\n')
             for k in os.environ.keys():
                 f_param.write('%s: %s\n', k, os.environ[k])
