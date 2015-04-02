@@ -1,72 +1,26 @@
 """Support code for YAML parsing of experiment descriptions."""
 import yaml
+from pylearn2.config.multi_seq import MultiSeq
+from pylearn2.config.proxy import Proxy
 from pylearn2.utils import serial
 from pylearn2.utils.exc import reraise_as
 from pylearn2.utils.string_utils import preprocess
 from pylearn2.utils.call_check import checked_call
 from pylearn2.utils.string_utils import match
-from collections import namedtuple
+
 import logging
 import warnings
 import re
-
 from theano.compat import six
 
 SCIENTIFIC_NOTATION_REGEXP = r'^[\-\+]?(\d+\.?\d*|\d*\.?\d+)?[eE][\-\+]?\d+$'
 
+
 is_initialized = False
 additional_environ = None
 logger = logging.getLogger(__name__)
-
-# Lightweight container for initial YAML evaluation.
-#
-# This is intended as a robust, forward-compatible intermediate representation
-# for either internal consumption or external consumption by another tool e.g.
-# hyperopt.
-#
-# We've included a slot for positionals just in case, though they are
-# unsupported by the instantiation mechanism as yet.
-BaseProxy = namedtuple('BaseProxy', ['callable', 'positionals',
-                                     'keywords', 'yaml_src'])
-
-
-class Proxy(BaseProxy):
-    """
-    An intermediate representation between initial YAML parse and object
-    instantiation.
-
-    Parameters
-    ----------
-    callable : callable
-        The function/class to call to instantiate this node.
-    positionals : iterable
-        Placeholder for future support for positional arguments (`*args`).
-    keywords : dict-like
-        A mapping from keywords to arguments (`**kwargs`), which may be
-        `Proxy`s or `Proxy`s nested inside `dict` or `list` instances.
-        Keys must be strings that are valid Python variable names.
-    yaml_src : str
-        The YAML source that created this node, if available.
-
-    Notes
-    -----
-    This is intended as a robust, forward-compatible intermediate
-    representation for either internal consumption or external consumption
-    by another tool e.g. hyperopt.
-
-    This particular class mainly exists to  override `BaseProxy`'s `__hash__`
-    (to avoid hashing unhashable namedtuple elements).
-    """
-    __slots__ = []
-
-    def __hash__(self):
-        """
-        Return a hash based on the object ID (to avoid hashing unhashable
-        namedtuple elements).
-        """
-        return hash(id(self))
-
-
+    
+        
 def do_not_recurse(value):
     """
     Function symbol used for wrapping an unpickled object (which should
@@ -340,9 +294,12 @@ def initialize():
     yaml.add_multi_constructor('!pkl:', multi_constructor_pkl)
     yaml.add_multi_constructor('!import:', multi_constructor_import)
     yaml.add_multi_constructor('!value:', multi_constructor_value)
+    yaml.add_multi_constructor('!multiseq:', multi_constructor_multiseq)
 
     yaml.add_constructor('!import', constructor_import)
     yaml.add_constructor("!float", constructor_float)
+    yaml.add_constructor("!int", constructor_int)
+    yaml.add_constructor("!range", constructor_range)
 
     pattern = re.compile(SCIENTIFIC_NOTATION_REGEXP)
     yaml.add_implicit_resolver('!float', pattern)
@@ -407,6 +364,71 @@ def multi_constructor_import(loader, tag_suffix, node):
         raise yaml.YAMLError("!import: tag suffix contains no '.'")
     return try_to_import(tag_suffix)
 
+
+def multi_constructor_multiseq(loader, tag_suffix, node):
+    """
+    Callback used by PyYAML when a "!multiseq:" tag is encountered.
+    """
+    global additional_environ
+    
+    if tag_suffix != "" and tag_suffix != u"":
+        raise AssertionError('Expected tag_suffix to be "" but it is "'
+                             + tag_suffix +
+                             '": multiseq takes a dictionary of values as input.')    
+
+    assert node.tag == '!multiseq:'
+    mapping = construct_mapping(node, True)
+    for key in mapping.keys():
+        if not isinstance(key, six.string_types):
+            message = "Received non string object (%s) as " \
+                      "key in mapping." % str(key)
+            raise TypeError(message)
+            
+    # extract values
+    if 'grouping' in mapping.keys():
+        grouping = mapping['grouping']
+        if not grouping in ['one', 'all', 'once']:
+            raise ValueError('!multiseq.grouping must be one of "one", "all" or "once"')
+    else:
+        grouping = 'once'
+        
+    if 'gen_val' in mapping.keys():
+        gen_val = mapping['gen_val']
+        if not gen_val in ['ordered', 'random']:
+            raise ValueError('!multiseq.gen_val must be one of "ordered" or "random"')
+    else:
+        gen_val = 'ordered'
+        
+    if 'gen_tag' in mapping.keys():
+        gen_tag = mapping['gen_tag']
+        if not gen_tag in ['uuid', 'time']:
+            raise ValueError('!multiseq.gen_tag must be one of "uuid" or "time"')
+    else:
+        gen_tag = 'time'
+    
+    if 'max_count' in mapping.keys():
+        max_count = int(mapping['max_count'])
+    else:
+        max_count = -1
+        
+    if 'names' in mapping.keys():
+        names = mapping['names']
+        if additional_environ:
+            additional_environ.update(names)
+        else:
+            additional_environ = names
+        
+    # set-up the singleton
+    mseq = MultiSeq.get_instance()
+    additional_environ.update()
+    mseq.reinit(grouping=grouping, 
+                gen_val=gen_val, 
+                gen_tag=gen_tag, 
+                max_count=max_count, 
+                environ=additional_environ)
+        
+    return mseq
+
 def multi_constructor_value(loader, tag_suffix, node):
     """
     Callback used by PyYAML when a "!value:" tag is encountered.
@@ -454,14 +476,50 @@ def constructor_import(loader, node):
     return try_to_import(value)
 
 
+def delayed_constructor_float(value):
+    return float(
+        eval(preprocess(value, additional_environ), 
+             {'__builtins__': []}, {})
+    )
+
 def constructor_float(loader, node):
     """
     Callback used by PyYAML when a "!float <str>" tag is encountered.
-    This tag exects a (quoted) string as argument.
+    This tag expects a (quoted) string as argument.
     """
+    yaml_src = yaml.serialize(node)
     value = loader.construct_scalar(node)
-    return float(preprocess(value, additional_environ))
+    return Proxy(callable=delayed_constructor_float, yaml_src=yaml_src, positionals=(),
+                 keywords={'value': value})
+                 
+def delayed_constructor_int(value):
+    return int(
+        eval(preprocess(value, additional_environ), 
+             {'__builtins__': []}, {})
+    )
 
+def constructor_int(loader, node):
+    """
+    Callback used by PyYAML when a "!int <str>" tag is encountered.
+    This tag expects a (quoted) string as argument.
+    """
+    yaml_src = yaml.serialize(node)
+    value = loader.construct_scalar(node)
+    return Proxy(callable=delayed_constructor_int, yaml_src=yaml_src, positionals=(),
+                 keywords={'value': value})
+                 
+def constructor_range(loader, node):
+    """
+    Callback used by PyYAML when a "!range <str>" tag is encountered.
+    This tag expects a (quoted) string as argument.
+    """
+    yaml_src = yaml.serialize(node)
+    mseq = MultiSeq.get_instance()
+    value = loader.construct_scalar(node)
+    rng_var = mseq.add_range_var(value)
+    return Proxy(callable=MultiSeq.get_value, yaml_src=yaml_src, positionals=(),
+             keywords={'rng_var': rng_var})
+    
 def construct_mapping(node, deep=False):
     # This is a modified version of yaml.BaseConstructor.construct_mapping
     # in which a repeated key raises a ConstructorError

@@ -482,29 +482,16 @@ def read_bin_lush_matrix(filepath):
 
     return rval
 
-def load_train_file(config_file_path, environ=None):
+def prepare_train_file(config_file_path):
     """
-    Loads and parses a yaml file for a Train object.
-    Publishes the relevant training environment variables
-
+    Publishes the relevant training environment variables for a Train object.
+    
     Parameters
     ----------
     config_file_path : str
-        Path to a config file containing a YAML string describing a
-        pylearn2.train.Train object
-    environ : dict, optional
-        A dictionary used for ${FOO} substitutions in addition to
-        environment variables when parsing the YAML file. If a key appears
-        both in `os.environ` and this dictionary, the value in this
-        dictionary is used.
-
-
-    Returns
-    -------
-    Object described by the YAML string stored in the config file
+        Path to a config file containing a YAML string
+    
     """
-    from pylearn2.config import yaml_parse
-
     suffix_to_strip = '.yaml'
 
     # Publish environment variables related to file name
@@ -522,5 +509,29 @@ def load_train_file(config_file_path, environ=None):
     os.environ["PYLEARN2_TRAIN_DIR"] = directory
     os.environ["PYLEARN2_TRAIN_BASE_NAME"] = config_file_path.split('/')[-1]
     os.environ["PYLEARN2_TRAIN_FILE_STEM"] = config_file_full_stem.split('/')[-1]
+
+def load_train_file(config_file_path, environ=None):
+    """
+    Loads and parses a yaml file for a Train object.
+    Publishes the relevant training environment variables
+
+    Parameters
+    ----------
+    config_file_path : str
+        Path to a config file containing a YAML string describing a
+        pylearn2.train.Train object
+    environ : dict, optional
+        A dictionary used for ${FOO} substitutions in addition to
+        environment variables when parsing the YAML file. If a key appears
+        both in `os.environ` and this dictionary, the value in this
+        dictionary is used.
+
+    Returns
+    -------
+    Object described by the YAML string stored in the config file
+    """
+    from pylearn2.config import yaml_parse
+
+    prepare_train_file(config_file_path)
 
     return yaml_parse.load_path(config_file_path, environ=environ)
