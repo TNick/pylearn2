@@ -312,7 +312,11 @@ def train(config, level_name=None, timestamp=None, time_budget=None,
                 os.environ[phase_variable] = phase_value
 
                 # Execute this training phase.
-                subobj.main_loop(time_budget=time_budget)
+                try:
+                    subobj.main_loop(time_budget=time_budget)
+                except:
+                    subobj.tear_down()
+                    raise
 
                 # log first train to the report
                 if first_subobj and repot_f:
