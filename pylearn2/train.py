@@ -93,7 +93,12 @@ class Train(object):
         """ Calls setup on all extensions."""
         for ext in self.extensions:
             ext.setup(self.model, self.dataset, self.algorithm)
-
+            
+    def tear_down_extensions(self):
+        """ Calls tear_down on all extensions."""
+        for ext in self.extensions:
+            ext.tear_down(self.model, self.dataset, self.algorithm)
+            
     def exceeded_time_budget(self, t0, time_budget):
         """
         .. todo::
@@ -125,6 +130,14 @@ class Train(object):
         # enforce constraints after each step of learning. Here we
         # make sure the constraints are enforced from the start.
         self.model.enforce_constraints()
+
+    def tear_down(self):
+        """
+        Called at the end of main loop.
+        """
+        self.tear_down_extensions()
+        #if self.algorithm is not None:
+        #    self.algorithm.tear_down()
 
     def main_loop(self, time_budget=None):
         """
@@ -228,6 +241,8 @@ already been reported."""
 
         if self.save_freq > 0:
             self.save()
+
+        self.tear_down()
 
     def run_callbacks_and_monitoring(self):
         """

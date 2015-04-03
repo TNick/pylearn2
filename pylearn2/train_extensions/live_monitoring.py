@@ -204,9 +204,12 @@ class LiveMonitoring(TrainExtension):
 
         assert pub_port > 1024 and pub_port < 65536
         self.pub_port = pub_port
+        self.context = zmq.Context()
+
+    @wraps(TrainExtension.setup)
+    def setup(self, model, dataset, algorithm):
 
         address_template = self.address + ':%d'
-        self.context = zmq.Context()
 
         self.req_sock = None
         if self.req_port > 0:
@@ -226,6 +229,25 @@ class LiveMonitoring(TrainExtension):
         # published in __build_channel_resp__()
         self.post_size = 0
 
+    @wraps(TrainExtension.tear_down)
+    def tear_down(self, model, dataset, algorithm):
+        address_template = self.address + ':%d'
+
+        if self.req_sock:
+            self.req_sock.unbind(address_template % self.req_port)
+
+        if self.pub_sock:
+            self.pub_sock.unbind(address_template % self.pub_port)
+
+    @wraps(TrainExtension.on_monitor)
+    def on_monitor(self, model, dataset, algorithm):
+        monitor = Monitor.get_monitor(model)
+        if self.req_port > 0:
+            self.__reply_to_req__(monitor)
+        if self.pub_port:
+            self.__publish_results__(monitor)
+        self.counter += 1
+
     def __build_channel_resp__(self, monitor, channel_list,
                                start=0, end=-1, step=1):
         """
@@ -241,7 +263,7 @@ class LiveMonitoring(TrainExtension):
         ----------
         monitor : Monitor
             Model's monitor from where we are about to extract the data
-
+address_template
         channel_list : list
             A list of the channels for which data is needed.
 
@@ -348,14 +370,6 @@ class LiveMonitoring(TrainExtension):
             LOG.warn("Exception while publishing results in LiveMonitoring:" +
                      ex.message)
 
-    @wraps(TrainExtension.on_monitor)
-    def on_monitor(self, model, dataset, algorithm):
-        monitor = Monitor.get_monitor(model)
-        if self.req_port > 0:
-            self.__reply_to_req__(monitor)
-        if self.pub_port:
-            self.__publish_results__(monitor)
-        self.counter += 1
 
 class LiveMonitor(object):
     """
