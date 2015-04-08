@@ -263,7 +263,7 @@ def train(config, level_name=None, timestamp=None, time_budget=None,
         hdr = (' Index      '
                'Date & Time                       '
                'Tag                  '
-               'Finish    Train    Total Batchs  Epchs  Exampls   '
+               'Finish    Train    Total Batchs  Epchs  Exampls   Params   '
                'Best result  Tests in file\n')
         hdr_guards = '-' * len(hdr) + '\n'
         repot_f.write('\n')
@@ -320,14 +320,19 @@ def train(config, level_name=None, timestamp=None, time_budget=None,
 
                 # log first train to the report
                 if first_subobj and repot_f:
-                    repot_f.write('%6s %8d %8d %6d %6d %8d %s' % \
+                    params = subobj.model.get_params()
+                    par_cnt = sum(map(lambda x: x.get_value().size, params))
+    
+                    repot_f.write('%6s %8d %8d %6d %6d %8d %8d %s' % \
                               (str(subobj.model.monitor.training_succeeded),
                                subobj.training_seconds.get_value().item(0),
                                subobj.total_seconds.get_value().item(0),
                                subobj.model.monitor.get_batches_seen(),
                                subobj.model.monitor.get_epochs_seen(),
                                subobj.model.monitor.get_examples_seen(),
+                               par_cnt
                                _getBestResult(subobj)))
+
 
                     # TODO: report performance here or channels
                     # for best model according to objective

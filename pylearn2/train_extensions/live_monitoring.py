@@ -25,7 +25,10 @@ try:
     import matplotlib
     import numpy as np
     matplotlib.use('Qt4Agg')
+    #matplotlib.use('Qt5Agg')
+    
     matplotlib.rcParams['backend.qt4'] = 'PySide'
+    #matplotlib.rcParams['backend.qt5'] = 'PySide'
 
     from matplotlib.backends.backend_qt4agg import (
         FigureCanvasQTAgg as FigureCanvas,
@@ -522,6 +525,7 @@ class LiveMonitor(object):
                         cutoff_loc = rsp_chan.epoch_record.index(0)
                     except ValueError:
                         cutoff_loc = None
+                first_channel = False
 
                 # Are we starting over?
                 if cutoff_loc is None:
@@ -539,7 +543,7 @@ class LiveMonitor(object):
                     chan.time_record = rsp_chan.time_record[cutoff_loc:]
                     chan.val_record = rsp_chan.val_record[cutoff_loc:]
 
-                first_channel = False
+                
 
     def follow_channels(self, channel_list, use_qt=False):
         """
@@ -647,7 +651,7 @@ if QT_AVAILABLE:
 
         def __common_ui__(self):
             if MPLDC_AVAILABLE:
-                opts = {'hover': True,
+                opts = {'hover': False,
                         'xytext':(15, -30),
                         'formatter':"{label} {y:0.3g}\nat epoch {x:0.0f}".format,
                         'keybindings':{'hide':'h', 'toggle':'e'},
@@ -700,7 +704,7 @@ if QT_AVAILABLE:
 
                 for channel_name in chan_list:
                     if not channel_name in self.live_mon.channels:
-                        splot_i = splot_i + 1
+                        #splot_i = splot_i + 1
                         continue
 
                     X = epoch_record = self.live_mon.channels[channel_name].epoch_record

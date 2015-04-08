@@ -23,6 +23,7 @@ def show_weights(model_path, rescale="individual",
     out : str, optional
         Output file to save weights to
     """
+    
     pv = get_weights_report.get_weights_report(model_path=model_path,
                                                rescale=rescale,
                                                border=border)

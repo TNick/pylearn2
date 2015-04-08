@@ -18,6 +18,9 @@ import numpy as np
 from theano.compat.six.moves import xrange
 from pylearn2.gui import patch_viewer
 from pylearn2.config import yaml_parse
+from pylearn2.train import Train
+from pylearn2.models.model import Model
+from pylearn2.datasets import Dataset
 
 
 def show_examples(path, rows, cols, rescale='global', out=None):
@@ -60,10 +63,25 @@ def show_examples(path, rows, cols, rescale='global', out=None):
     else:
         obj = yaml_parse.load(path)
 
-    if hasattr(obj, 'get_batch_topo'):
+    # Do we have a readly available dataset or do we need to load it?
+    is_dataset = False
+    
+    # only deal with the first item in the list
+    if isinstance(obj, list):
+        obj = obj[0]
+    
+    # some common cases
+    if isinstance(obj, Train):
+        obj = obj.dataset
+        is_dataset = True
+    elif isinstance(obj, Model):
+        is_dataset = False
+    elif isinstance(obj, Dataset) or hasattr(obj, 'get_batch_topo'):
+        is_dataset = True
+        
+    if is_dataset:
         # obj is a Dataset
         dataset = obj
-
         examples = dataset.get_batch_topo(rows*cols)
     else:
         # obj is a Model
@@ -107,13 +125,19 @@ def show_examples(path, rows, cols, rescale='global', out=None):
         is_color = False
     elif examples.shape[3] == 3:
         is_color = True
-    else:
-        print('got unknown image format with', str(examples.shape[3]), end='')
+    elif examples.shape[0] == 1:
+        is_color = False
+        examples = examples.swapaxes(0, 3)
+    elif examples.shape[0] == 3:
+        is_color = True
+        examples = examples.swapaxes(0, 3)
+    else:            
+        print('got unknown image format with', str(examples.shape[3]), end=' ')
         print('channels')
         print('supported formats are 1 channel greyscale or three channel RGB')
         quit(-1)
 
-    print(examples.shape[1:3])
+    print("shape of individual images: %s pixels" % str(examples.shape[1:3]))
 
     pv = patch_viewer.PatchViewer((rows, cols), examples.shape[1:3],
                                   is_color=is_color)

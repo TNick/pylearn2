@@ -35,7 +35,13 @@ def main(models, all=False):
     values = {}
     for filename in np.atleast_1d(models):
         this_models = serial.load(filename)
-        for model in list(this_models):
+
+        try:
+            this_models = list(this_models)
+        except TypeError:
+            this_models = [this_models]
+
+        for model in this_models:
             monitor = model.monitor
             channels = monitor.channels
             epochs.append(monitor._epochs_seen)

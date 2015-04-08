@@ -40,6 +40,9 @@ __author__ = "Ian Goodfellow"
 
 import sys
 import types
+import numpy
+from theano.sandbox.cuda import CudaNdarray
+from theano import config as thcfg
 
 if __name__ == '__main__':
     _, in_path, out_path = sys.argv
@@ -81,6 +84,9 @@ if __name__ == '__main__':
         prefix = ''.join(['.']*stacklevel)
         oid = id(obj)
         canary_oid = oid
+        
+        
+        
         print(prefix + 'fixing '+str(oid))
         if oid in already_fixed:
             return already_fixed[oid]
@@ -88,9 +94,16 @@ if __name__ == '__main__':
             print('returning placeholder for '+str(oid))
             return Placeholder(oid)
         currently_fixing.append(oid)
-        if hasattr(obj, 'set_value'):
+        if isinstance(obj, CudaNdarray):
+            rval = numpy.asarray(obj)
+        elif hasattr(obj, 'set_value'):
             # Base case: we found a shared variable, must convert it
+            
             rval = shared(obj.get_value())
+            try:
+                rval.name = obj.name
+            except AttributeError:
+                pass
             # Sabotage its getstate so if something tries to pickle it, we'll find out
             obj.__getstate__ = None
         elif obj is None:
@@ -136,6 +149,9 @@ if __name__ == '__main__':
             rval = tuple(rval)
         elif isinstance(obj, (int, float, str)):
             rval = obj
+        elif isinstance(obj, (types.FunctionType, types.BuiltinFunctionType)):
+            print(prefix + "!!!! skipping a function (can't pickle function objects) !!!!!!!!!")
+            rval = ""
         else:
             print(prefix + 'fixing a generic object')
             field_names = dir(obj)
