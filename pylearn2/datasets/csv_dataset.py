@@ -124,7 +124,7 @@ class CSVDataset(DenseDesignMatrix):
         if self.task == 'regression':
             super(CSVDataset, self).__init__(X=X, y=y, **kwargs)
         else:
-            super(CSVDataset, self).__init__(X=X, y=y,
+            super(CSVDataset, self).__init__(X=X, y=y.astype(int),
                                              y_labels=np.max(y) + 1, **kwargs)
 
     def _load_data(self):
