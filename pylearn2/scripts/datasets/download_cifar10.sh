@@ -18,8 +18,9 @@ else
     exit 1
 fi
 
-[ -d $CIFAR10_DIR ] && echo "$CIFAR10_DIR already exists." && exit 1
-mkdir -p $CIFAR10_DIR
+if [ ! -d $CIFAR10_DIR ]; then
+    mkdir -p $CIFAR10_DIR
+fi
 
 echo "Downloading and unzipping CIFAR-10 dataset into $CIFAR10_DIR..."
 pushd $CIFAR10_DIR > /dev/null
