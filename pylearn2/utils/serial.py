@@ -1,7 +1,5 @@
 """
-.. todo::
-
-    WRITEME
+Utilities for serializing and deserializing python objects.
 """
 try:
     from cPickle import BadPickleGet
@@ -240,7 +238,8 @@ def save(filepath, obj, on_overwrite = 'ignore'):
             try:
                 os.remove(backup)
             except Exception as e:
-                warnings.warn("Got an error while traing to remove "+backup+":"+str(e))
+                warnings.warn("Got an error while trying to remove " + backup
+                              + ":" + str(e))
             return
         else:
             assert on_overwrite == 'ignore'
@@ -273,6 +272,7 @@ def save(filepath, obj, on_overwrite = 'ignore'):
             finally:
                 sys.setrecursionlimit(old_limit)
 
+
 def get_pickle_protocol():
     """
     Allow configuration of the pickle protocol on a per-machine basis.
@@ -292,6 +292,7 @@ def get_pickle_protocol():
     if protocol_str == 'pickle.HIGHEST_PROTOCOL':
         return pickle.HIGHEST_PROTOCOL
     return int(protocol_str)
+
 
 def _save(filepath, obj):
     """
@@ -361,11 +362,11 @@ def _save(filepath, obj):
                 import pdb
                 tb = pdb.traceback.format_exc()
                 reraise_as(IOError(str(obj) +
-                              ' could not be written to '+
-                              str(filepath) +
-                              ' by cPickle due to ' + str(e) +
-                              ' nor by pickle due to ' + str(e2) +
-                              '. \nTraceback '+ tb))
+                                   ' could not be written to ' +
+                                   str(filepath) +
+                           ' by cPickle due to ' + str(e) +
+                                   ' nor by pickle due to ' + str(e2) +
+                                   '. \nTraceback ' + tb))
         logger.warning('{0} was written by pickle instead of cPickle, due to '
                        '{1} (perhaps your object'
                        ' is really big?)'.format(filepath, e))
@@ -373,26 +374,53 @@ def _save(filepath, obj):
 
 def clone_via_serialize(obj):
     """
-    .. todo::
+    Makes a "deep copy" of an object by serializing it and then
+    deserializing it.
 
-        WRITEME
+    Parameters
+    ----------
+    obj : object
+        The object to clone.
+
+    Returns
+    -------
+    obj2 : object
+        A copy of the object.
     """
     s = cPickle.dumps(obj, get_pickle_protocol())
     return cPickle.loads(s)
 
+
 def to_string(obj):
     """
-    .. todo::
+    Serializes an object to a string.
 
-        WRITEME
+    Parameters
+    ----------
+    obj : object
+        The object to serialize.
+
+    Returns
+    -------
+    string : str
+        The object serialized as a string.
     """
     return cPickle.dumps(obj, get_pickle_protocol())
 
+
 def from_string(s):
     """
-    .. todo::
+    Deserializes an object from a string.
 
-        WRITEME
+    Parameters
+    ----------
+    s : str
+        The object serialized as a string.
+
+    Returns
+    -------
+    obj : object
+        The object.
     """
     return cPickle.loads(s)
 
@@ -415,11 +443,22 @@ def mkdir(filepath):
         if not os.path.isdir(filepath):
             raise
 
-def read_int( fin, n = 1):
-    """
-    .. todo::
 
-        WRITEME
+def read_int(fin, n=1):
+    """
+    Reads n ints from a file.
+
+    Parameters
+    ----------
+    fin : file
+        Readable file object
+    n : int
+        Number of ints to read
+
+    Returns
+    -------
+    rval : int or list
+        The integer or integers requested
     """
     if n == 1:
         s = fin.read(4)
@@ -432,22 +471,31 @@ def read_int( fin, n = 1):
             rval.append(read_int(fin))
         return rval
 
-#dictionary to convert lush binary matrix magic numbers
-#to dtypes
+# dictionary to convert lush binary matrix magic numbers
+# to dtypes
 lush_magic = {
-            507333717 : 'uint8',
-            507333716 : 'int32',
-            507333713 : 'float32',
-            507333715 : 'float64'
-        }
+    507333717: 'uint8',
+    507333716: 'int32',
+    507333713: 'float32',
+    507333715: 'float64'
+}
+
 
 def read_bin_lush_matrix(filepath):
     """
-    .. todo::
+    Reads a binary matrix saved by the lush library.
 
-        WRITEME
+    Parameters
+    ----------
+    filepath : str
+        The path to the file.
+
+    Returns
+    -------
+    matrix : ndarray
+        A NumPy version of the stored matrix.
     """
-    f = open(filepath,'rb')
+    f = open(filepath, 'rb')
     try:
         magic = read_int(f)
     except ValueError:
@@ -466,15 +514,17 @@ def read_bin_lush_matrix(filepath):
     try:
         dtype = lush_magic[magic]
     except KeyError:
-        reraise_as(ValueError('Unrecognized lush magic number '+str(magic)))
+        reraise_as(ValueError('Unrecognized lush magic number ' + str(magic)))
 
-    rval = np.fromfile(file = f, dtype = dtype, count = total_elems)
+    rval = np.fromfile(file=f, dtype=dtype, count=total_elems)
 
     excess = f.read(-1)
 
     if excess:
-        raise ValueError(str(len(excess))+' extra bytes found at end of file.'
-                ' This indicates  mismatch between header and content')
+        raise ValueError(str(len(excess)) +
+                         ' extra bytes found at end of file.'
+                         ' This indicates  mismatch between header '
+                         'and content')
 
     rval = rval.reshape(*shape)
 
@@ -525,6 +575,7 @@ def load_train_file(config_file_path, environ=None):
         environment variables when parsing the YAML file. If a key appears
         both in `os.environ` and this dictionary, the value in this
         dictionary is used.
+
 
     Returns
     -------
