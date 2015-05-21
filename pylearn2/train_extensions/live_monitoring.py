@@ -314,11 +314,49 @@ class LiveMonitoring(TrainExtension):
 
             elif isinstance(rsp_msg, ChannelsResponse):
                 channel_list = rsp_msg.channel_list
-                rsp_msg.data = self.__build_channel_resp__(monitor,
-                                                           channel_list,
-                                                           rsp_msg.start,
-                                                           rsp_msg.end,
-                                                           rsp_msg.step)
+                if (
+                        not isinstance(channel_list, list)
+                        or len(channel_list) == 0
+                ):
+                    channel_list = []
+                    result = TypeError(
+                        'ChannelResponse requires a list of channels.'
+                    )
+
+                result = {}
+                for channel_name in channel_list:
+                    if channel_name in monitor.channels.keys():
+                        chan = copy.deepcopy(
+                            monitor.channels[channel_name]
+                        )
+                        end = rsp_msg.end
+                        if end == -1:
+                            end = len(chan.batch_record)
+                        # TODO copying and truncating the records individually
+                        # like this is brittle. Is there a more robust
+                        # solution?
+                        chan.batch_record = chan.batch_record[
+                            rsp_msg.start:end:rsp_msg.step
+                        ]
+                        chan.epoch_record = chan.epoch_record[
+                            rsp_msg.start:end:rsp_msg.step
+                        ]
+                        chan.example_record = chan.example_record[
+                            rsp_msg.start:end:rsp_msg.step
+                        ]
+                        chan.time_record = chan.time_record[
+                            rsp_msg.start:end:rsp_msg.step
+                        ]
+                        chan.val_record = chan.val_record[
+                            rsp_msg.start:end:rsp_msg.step
+                        ]
+                        result[channel_name] = chan
+                    else:
+                        result[channel_name] = KeyError(
+                            'Invalid channel: %s' % rsp_msg.channel
+                        )
+                rsp_msg.data = result
+
             self.req_sock.send_pyobj(rsp_msg)
         except zmq.Again:
             pass
