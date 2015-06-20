@@ -126,7 +126,7 @@ class CSVDataset(DenseDesignMatrix):
             super(CSVDataset, self).__init__(X=X, y=y, **kwargs)
         else:
             super(CSVDataset, self).__init__(X=X, y=y,
-                                             y_labels=np.max(y) + 1, **kwargs)
+                                             **kwargs)
 
     def _load_data(self):
         """
