@@ -9,6 +9,7 @@ from collections import namedtuple
 import logging
 import warnings
 import re
+from collections import OrderedDict
 
 from theano.compat import six
 
@@ -117,8 +118,9 @@ def _instantiate_proxy_tuple(proxy, bindings=None):
             if len(proxy.positionals) > 0:
                 raise NotImplementedError('positional arguments not yet '
                                           'supported in proxy instantiation')
-            kwargs = dict((k, _instantiate(v, bindings))
-                          for k, v in six.iteritems(proxy.keywords))
+            kwargs = OrderedDict()
+            for k, v in six.iteritems(proxy.keywords):
+                kwargs[k] = _instantiate(v, bindings)
             obj = checked_call(proxy.callable, kwargs)
         try:
             obj.yaml_src = proxy.yaml_src
@@ -157,8 +159,10 @@ def _instantiate(proxy, bindings=None):
     elif isinstance(proxy, dict):
         # Recurse on the keys too, for backward compatibility.
         # Is the key instantiation feature ever actually used, by anyone?
-        return dict((_instantiate(k, bindings), _instantiate(v, bindings))
-                    for k, v in six.iteritems(proxy))
+        result = OrderedDict()
+        for k, v in six.iteritems(proxy):
+            result[_instantiate(k, bindings)] = _instantiate(v, bindings)
+        return result
     elif isinstance(proxy, list):
         return [_instantiate(v, bindings) for v in proxy]
     # In the future it might be good to consider a dict argument that provides
@@ -361,7 +365,7 @@ def multi_constructor_obj(loader, tag_suffix, node):
     See PyYAML documentation for details on the call signature.
     """
     yaml_src = yaml.serialize(node)
-    construct_mapping(node)
+    mapping = construct_mapping(node)
     mapping = loader.construct_mapping(node)
 
     assert hasattr(mapping, 'keys')
@@ -394,8 +398,9 @@ def multi_constructor_pkl(loader, tag_suffix, node):
 
     mapping = loader.construct_yaml_str(node)
     obj = serial.load(preprocess(mapping, additional_environ))
+    keywords = OrderedDict(value=obj)
     proxy = Proxy(callable=do_not_recurse, positionals=(),
-                  keywords={'value': obj}, yaml_src=yaml.serialize(node))
+                  keywords=keywords, yaml_src=yaml.serialize(node))
     return proxy
 
 
@@ -471,7 +476,7 @@ def construct_mapping(node, deep=False):
         raise const.ConstructorError(None, None,
                                      "%s %s " % (message, node.id),
                                      node.start_mark)
-    mapping = {}
+    mapping = OrderedDict()
     constructor = yaml.constructor.BaseConstructor()
     for key_node, value_node in node.value:
         key = constructor.construct_object(key_node, deep=False)
