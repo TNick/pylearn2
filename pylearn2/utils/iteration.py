@@ -997,6 +997,16 @@ class FiniteDatasetIterator(object):
     def _fallback_next(self, next_index):
         # TODO: handle fancy-index copies by allocating a buffer and
         # using np.take()
+        
+        #result = []
+        #for data, fn in safe_izip(self._raw_data, self._convert):
+        #    if fn:
+        #        item = fn(data[next_index])
+        #    else:
+        #        item = data[next_index]
+        #    result.append(item)
+        #return tuple(result)
+
         return tuple(
             fn(data[next_index]) if fn else data[next_index]
             for data, fn in safe_izip(self._raw_data, self._convert)
